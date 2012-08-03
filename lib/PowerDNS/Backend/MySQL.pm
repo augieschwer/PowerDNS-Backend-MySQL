@@ -222,6 +222,24 @@ sub add_domain($)
 	return 1;
 }
 
+=head2 add_master(\$domain)
+
+Expects a scalar reference domain name to add to the DB as type master.
+Returns 1 on success and 0 on failure.
+
+=cut
+
+sub add_master($)
+{
+        my $self = shift;
+        my $domain = shift;
+
+        my $sth = $self->{'dbh'}->prepare("INSERT INTO domains (name,type) VALUES (?,'MASTER')");
+        if ( $sth->execute($$domain) != 1 ) { return 0; }
+
+        return 1;
+}
+
 =head2 add_slave(\$slave_domain , \$master_ip)
 
 Expects two scalar references; first the domain to slave, then the IP address to 
@@ -718,7 +736,24 @@ sub make_domain_native($)
 
 	return 1;
 }
+=head2 make_domain_master(\$domain)
 
+Makes the specified domain a 'MASTER' domain.
+Expects one scalar reference which is the domain name to be updated.
+Returns 1 upon succes and 0 otherwise.
+
+=cut
+
+sub make_domain_master($)
+{
+        my $self = shift;
+        my $domain = shift;
+
+        my $sth = $self->{'dbh'}->prepare("UPDATE domains set type='MASTER' , master='' WHERE name=?");
+        if ( $sth->execute($$domain) != 1 ) { return 0; }
+
+        return 1;
+}
 =head2 get_domain_type(\$domain)
 
 Expects one scalar reference which is the domain name to query for.
@@ -850,6 +885,9 @@ sub increment_serial($)
 	unless ( $pdns->add_domain(\$domain) )
         { print "Could not add domain : $domain \n"; }
 
+        unless ( $pdns->add_master(\$domain) )
+        { print "Could not add master domain : $domain \n"; }
+
 	unless ( $pdns->add_slave(\$domain,\$master) )
         { print "Could not add slave domain : $domain \n"; }
 
@@ -929,6 +967,9 @@ sub increment_serial($)
 
 	my $domain = 'example.com';
 	$pdns->make_domain_native(\$domain);
+
+        my $domain = 'example.com';
+        $pdns->make_domain_master(\$domain);
 
 	my $domain = 'example.com';
 	my $type = $pdns->get_domain_type(\$domain);
