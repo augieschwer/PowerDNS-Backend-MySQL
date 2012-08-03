@@ -1,4 +1,3 @@
-# $Id: MySQL.pm 4550 2012-07-27 22:20:10Z augie $
 # Provides an interface to manipulate PowerDNS data in the MySQL Backend.
 
 package PowerDNS::Backend::MySQL;
@@ -14,11 +13,11 @@ PowerDNS::Backend::MySQL - Provides an interface to manipulate PowerDNS data in 
 
 =head1 VERSION
 
-Version 0.10
+Version 0.11
 
 =cut
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 =head1 SYNOPSIS
 
@@ -1046,8 +1045,7 @@ under the same terms as Perl itself.
 
 =head1 VERSION
 
-	0.10
-	$Id: MySQL.pm 4550 2012-07-27 22:20:10Z augie $
+	0.11
 
 =cut
 

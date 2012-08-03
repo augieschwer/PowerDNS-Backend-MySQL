@@ -1,5 +1,8 @@
 Revision history for PowerDNS-Backend-MySQL
 
+0.11	Fri Aug  3 16:15:23 PDT 2012
+	Adding two new methods: make_domain_master and add_master to address bug #76908 - patch submitted by Rich Vincelette <rvincelette@athenahealth.com> .
+
 0.10	Fri Jan 13 16:44:34 PST 2012
 	Adding the 'list_all_records' method.
 
