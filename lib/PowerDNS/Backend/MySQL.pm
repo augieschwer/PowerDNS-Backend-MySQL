@@ -1032,6 +1032,10 @@ L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=PowerDNS-Backend-MySQL>
 
 L<http://search.cpan.org/dist/PowerDNS-Backend-MySQL>
 
+=item * Github
+
+L<https://github.com/augieschwer/PowerDNS-Backend-MySQL>
+
 =back
 
 =head1 ACKNOWLEDGEMENTS
