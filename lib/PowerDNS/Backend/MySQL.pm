@@ -735,6 +735,7 @@ sub make_domain_native($)
 
 	return 1;
 }
+
 =head2 make_domain_master(\$domain)
 
 Makes the specified domain a 'MASTER' domain.
@@ -753,6 +754,7 @@ sub make_domain_master($)
 
         return 1;
 }
+
 =head2 get_domain_type(\$domain)
 
 Expects one scalar reference which is the domain name to query for.
