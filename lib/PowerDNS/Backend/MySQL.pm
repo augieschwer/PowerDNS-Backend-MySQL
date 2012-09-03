@@ -21,49 +21,51 @@ our $VERSION = '0.11';
 
 =head1 SYNOPSIS
 
-	use PowerDNS::Backend::MySQL;
+    use PowerDNS::Backend::MySQL;
 
-	# Setting parameters and their default values.
-	my $params = {	db_user			=>	'root',
-			db_pass			=>	'',
-			db_name			=>	'pdns',
-			db_port			=>	'3306',
-			db_host			=>	'localhost',
-			mysql_print_error	=>	1,
-			mysql_warn		=>	1,
-			mysql_auto_commit	=>	1,
-			mysql_auto_reconnect	=>	1,
-			lock_name		=>	'powerdns_backend_mysql',
-			lock_timeout		=>	3,
-	};
+    # Setting parameters and their default values.
+    my %params = (
+            db_user            =>    'root',
+            db_pass            =>    '',
+            db_name            =>    'pdns',
+            db_port            =>    '3306',
+            db_host            =>    'localhost',
+            mysql_print_error  =>    1,
+            mysql_warn         =>    1,
+            mysql_auto_commit  =>    1,
+            mysql_auto_reconnect =>  1,
+            lock_name           =>    'powerdns_backend_mysql',
+            lock_timeout        =>    3,
+    );
 
-	my $pdns = PowerDNS::Backend::MySQL->new($params);
+    my $pdns = PowerDNS::Backend::MySQL->new($params);
 
 =head1 DESCRIPTION
 
-	PowerDNS::Backend::MySQL provides a layer of abstraction
-	for manipulating the data stored in the PowerDNS MySQL backend.
+    PowerDNS::Backend::MySQL provides a layer of abstraction
+    for manipulating the data stored in the PowerDNS MySQL backend.
 
 =head1 METHODS
 
 =head2 new(\%params)
 
-	my $params = {	db_user			=>	'root',
-			db_pass			=>	'',
-			db_name			=>	'pdns',
-			db_port			=>	'3306',
-			db_host			=>	'localhost',
-			mysql_print_error	=>	1,
-			mysql_warn		=>	1,
-			mysql_auto_commit	=>	1,
-			mysql_auto_reconnect	=>	1,
-			lock_name		=>	'powerdns_backend_mysql',
-			lock_timeout		=>	3,
-	};
+    my $params = {
+            db_user            =>    'root',
+            db_pass            =>    '',
+            db_name            =>    'pdns',
+            db_port            =>    '3306',
+            db_host            =>    'localhost',
+            mysql_print_error  =>    1,
+            mysql_warn         =>    1,
+            mysql_auto_commit  =>    1,
+            mysql_auto_reconnect    =>    1,
+            lock_name           =>    'powerdns_backend_mysql',
+            lock_timeout        =>    3,
+    };
 
-	my $pdns = PowerDNS::Backend::MySQL->new($params);
+    my $pdns = PowerDNS::Backend::MySQL->new($params);
 
-	Creates a PowerDNS::Backend::MySQL object.
+    Creates a PowerDNS::Backend::MySQL object.
 
 =over 4
 
@@ -121,7 +123,15 @@ this option can be used to override the default lock timeout used in those calls
 
 sub new {
     my $class  = shift;
-    my $params = shift;
+    my $params;
+
+    if (ref $_[0]) {
+        $params = shift;
+    }
+    else {
+        %$params = @_
+    }
+
     my $self   = {};
 
     bless $self, ref $class || $class;
@@ -183,7 +193,7 @@ sub _lock {
     my $lock_timeout = $self->{'lock_timeout'};
 
     my $sth =
-      $self->{'dbh'}->prepare("SELECT GET_LOCK('$lock_name',$lock_timeout)");
+      $self->{'dbh'}->prepare("SELECT GET_LOCK('$lock_name',$lock_timeout)"); # FIXME
     if ( !$sth->execute ) {
         return 0;
     }
@@ -199,7 +209,7 @@ sub _unlock {
     my $self      = shift;
     my $lock_name = $self->{'lock_name'};
 
-    my $sth = $self->{'dbh'}->prepare("SELECT RELEASE_LOCK('$lock_name')");
+    my $sth = $self->{'dbh'}->prepare("SELECT RELEASE_LOCK('$lock_name')"); # FIXME
     if ( !$sth->execute ) {
         return 0;
     }
@@ -208,45 +218,45 @@ sub _unlock {
     return $rv;
 }
 
-=head2 add_domain(\$domain)
+=head2 add_domain($domain)
 
-Expects a scalar reference domain name to add to the DB.
+Expects a scalar domain name to add to the DB.
 Returns 1 on success and 0 on failure.
 
 =cut
 
-sub add_domain($) {
+sub add_domain {
     my $self   = shift;
     my $domain = shift;
 
     my $sth =
       $self->{'dbh'}
-      ->prepare("INSERT INTO domains (name,type) VALUES (?,'NATIVE')");
-    if ( $sth->execute($$domain) != 1 ) { return 0; }
+      ->prepare(q/INSERT INTO domains (name,type) VALUES (?,'NATIVE') --/);
+    if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
 }
 
-=head2 add_master(\$domain)
+=head2 add_master($domain)
 
-Expects a scalar reference domain name to add to the DB as type master.
+Expects a scalar domain name to add to the DB as type master.
 Returns 1 on success and 0 on failure.
 
 =cut
 
-sub add_master($) {
+sub add_master {
     my $self   = shift;
     my $domain = shift;
 
     my $sth =
       $self->{'dbh'}
-      ->prepare("INSERT INTO domains (name,type) VALUES (?,'MASTER')");
-    if ( $sth->execute($$domain) != 1 ) { return 0; }
+      ->prepare(q/INSERT INTO domains (name,type) VALUES (?,'MASTER') --/);
+    if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
 }
 
-=head2 add_slave(\$slave_domain , \$master_ip)
+=head2 add_slave($slave_domain , $master_ip)
 
 Expects two scalar references; first the domain to slave, then the IP address to
 slave from.
@@ -255,7 +265,7 @@ Updates the existing record if there is one, otherwise inserts a new record.
 
 =cut
 
-sub add_slave($$) {
+sub add_slave {
     my $self   = shift;
     my $domain = shift;
     my $master = shift;
@@ -264,33 +274,35 @@ sub add_slave($$) {
     if ( $self->domain_exists($domain) ) {
         $sth =
           $self->{'dbh'}->prepare(
-            "UPDATE domains set master = ? , type = 'SLAVE' WHERE name = ?");
-        if ( $sth->execute( $$master, $$domain ) != 1 ) { return 0; }
+            q/UPDATE domains set master = ? , type = 'SLAVE' WHERE name = ? --/);
+        if ( $sth->execute( $master, $domain ) != 1 ) { return 0; }
     }
     else {
         $sth =
           $self->{'dbh'}->prepare(
-            "INSERT INTO domains (name,master,type) VALUES(?,?,'SLAVE')");
-        if ( $sth->execute( $$domain, $$master ) != 1 ) { return 0; }
+            q/INSERT INTO domains (name,master,type) VALUES(?,?,'SLAVE') --/);
+        if ( $sth->execute( $domain, $master ) != 1 ) { return 0; }
     }
 
     return 1;
 }
 
-=head2 delete_domain(\$domain)
+=head2 delete_domain($domain)
 
-Expects a scalar reference domain name to delete from the DB.
+Expects a scalar domain name to delete from the DB.
 Returns 1 on success and 0 on failure.
+
+FIXME: does this recurse? not in code but via cascading from foreign keys?
 
 =cut
 
-sub delete_domain($) {
+sub delete_domain {
     my $self   = shift;
     my $domain = shift;
 
     # Remove domain.
-    my $sth = $self->{'dbh'}->prepare("DELETE FROM domains WHERE name = ?");
-    if ( $sth->execute($$domain) != 1 ) { return 0; }
+    my $sth = $self->{'dbh'}->prepare(q/DELETE FROM domains WHERE name = ? --/);
+    if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
 }
@@ -308,7 +320,7 @@ sub list_domain_names {
     my @domains;
 
     # Grab the domain names.
-    my $sth = $self->{'dbh'}->prepare("SELECT name FROM domains");
+    my $sth = $self->{'dbh'}->prepare(q/SELECT name FROM domains --/);
     $sth->execute;
 
     while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
@@ -316,37 +328,39 @@ sub list_domain_names {
     return \@domains;
 }
 
-=head2 list_domain_names_by_type(\$type)
+=head2 list_domain_names_by_type($type)
 
-Expects a scalar reference to a string which is the domain 'type' (i.e. NATIVE, SLAVE, MASTER, etc.)
+Expects a scalar which is the domain 'type' (i.e. NATIVE, SLAVE, MASTER, etc.)
 Returns a reference to an array which contains all the domain names of that type.
 
 =cut
 
-sub list_domain_names_by_type($) {
+sub list_domain_names_by_type {
     my $self = shift;
     my $type = shift;
     my @domains;
 
     # Grab the domain names.
     my $sth =
-      $self->{'dbh'}->prepare("SELECT name FROM domains WHERE type = ?");
-    $sth->execute($$type);
+      $self->{'dbh'}->prepare(q/SELECT name FROM domains WHERE type = ? --/);
+    $sth->execute($type);
 
     while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
 
     return \@domains;
 }
 
-=head2 list_slave_domain_names(\$master_ip)
+=head2 list_slave_domain_names($master_ip)
 
-Expects a scalar reference to an IP address which is the master IP.
+Expects a scalar IP address which is the master IP.
 Returns a reference to an array which contains all the slave domain names
 with $master as their 'master'.
 
+FIXME: should consider ipv4, ipv6
+
 =cut
 
-sub list_slave_domain_names($) {
+sub list_slave_domain_names {
     my $self   = shift;
     my $master = shift;
     my @domains;
@@ -354,42 +368,44 @@ sub list_slave_domain_names($) {
     # Grab the domain names.
     my $sth =
       $self->{'dbh'}
-      ->prepare("SELECT name FROM domains WHERE TYPE = 'SLAVE' AND master = ?");
-    $sth->execute($$master);
+      ->prepare(q/SELECT name FROM domains WHERE TYPE = 'SLAVE' AND master = ? --/);
+    $sth->execute($master);
 
     while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
 
     return \@domains;
 }
 
-=head2 domain_exists(\$domain)
+=head2 domain_exists($domain)
 
-Expects a scalar reference to a domain name to be found in the "domains" table.
+Expects a scalar domain name to be found in the "domains" table.
 Returns 1 if the domain name is found, and 0 if it is not found.
 
 =cut
 
-sub domain_exists($) {
+sub domain_exists {
     my $self   = shift;
     my $domain = shift;
 
-    my $sth = $self->{'dbh'}->prepare("SELECT id FROM domains WHERE name = ?");
-    $sth->execute($$domain) or return 0;
+    my $sth = $self->{'dbh'}->prepare(q/SELECT id FROM domains WHERE name = ? --/);
+    $sth->execute($domain) or return 0;
 
     my @record = $sth->fetchrow_array;
 
-    scalar(@record) ? return 1 : return 0;
+    return (@record) ? 1 : 0;
 }
 
-=head2 list_records(\$rr , \$domain)
+=head2 list_records($rr, $domain)
 
-Expects two scalar references; the first to a resource record and the second to a domain name.
+Expects two scalars; the first to a resource record and the second to a domain name.
 Returns a reference to a two-dimensional array which contains the resource record name, content,
 TTL, and priority if any.
 
+# FIXME: a list of hash references might be a nicer arrangement to return
+
 =cut
 
-sub list_records($$) {
+sub list_records {
     my $self   = shift;
     my $rr     = shift;
     my $domain = shift;
@@ -397,9 +413,9 @@ sub list_records($$) {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
-    $sth->execute( $$rr, $$domain );
+    $sth->execute( $rr, $domain );
 
     while ( my ( $name, $content, $ttl, $prio ) = $sth->fetchrow_array ) {
         push @records, [ ( $name, $content, $ttl, $prio ) ];
@@ -408,24 +424,24 @@ sub list_records($$) {
     return \@records;
 }
 
-=head2 list_all_records(\$domain)
+=head2 list_all_records($domain)
 
-Expects a scalar reference to a domain name.
+Expects a scalar domain name.
 Returns a reference to a two-dimensional array which contains the resource record name, type,
 content, TTL, and priority if any of the supplied domain.
 
 =cut
 
-sub list_all_records($) {
+sub list_all_records {
     my $self   = shift;
     my $domain = shift;
     my @records;
 
     my $sth =
       $self->{'dbh'}->prepare(
-"SELECT name,type,content,ttl,prio FROM records WHERE domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/SELECT name,type,content,ttl,prio FROM records WHERE domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
-    $sth->execute($$domain);
+    $sth->execute($domain);
 
     while ( my ( $name, $type, $content, $ttl, $prio ) = $sth->fetchrow_array )
     {
@@ -435,17 +451,17 @@ sub list_all_records($) {
     return \@records;
 }
 
-=head2 add_record(\$rr , \$domain)
+=head2 add_record(\@rr, $domain)
 
 Adds a single record to the backend.
-Expects two scalar references; one to an array that contains the information for the
+Expects an array reference and a scalar; one to an array that contains the information for the
 resource record (name, type, content, ttl, prio); name, type and content are required values.
-The other scalar reference is the zone you want to add the RR to.
+The other is the zone you want to add the RR to.
 Returns 1 if the record was successfully added, and 0 if not.
 
 =cut
 
-sub add_record($$) {
+sub add_record {
     my $self   = shift;
     my $rr     = shift;
     my $domain = shift;
@@ -463,9 +479,9 @@ sub add_record($$) {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?"
+q/INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ? --/
       );
-    if ( $sth->execute( $name, $type, $content, $ttl, $prio, $$domain ) <= 0 ) {
+    if ( $sth->execute( $name, $type, $content, $ttl, $prio, $domain ) <= 0 ) {
         $self->_unlock;
         return 0;
     }
@@ -476,17 +492,17 @@ sub add_record($$) {
     return 1;
 }
 
-=head2 delete_record(\$rr , \$domain)
+=head2 delete_record(\@rr , $domain)
 
 Deletes a single record from the backend.
-Expects two scalar references; one to an array that contains the information for the
+Expects two parameters; one an array reference that contains the information for the
 resource record (name, type, content); these are all required values.
-The other scalar reference is the zone you want to delete the RR from.
+The other scalar is the zone you want to delete the RR from.
 Returns 1 if the record was successfully deleted, and 0 if not.
 
 =cut
 
-sub delete_record($$) {
+sub delete_record {
     my $self   = shift;
     my $rr     = shift;
     my $domain = shift;
@@ -500,21 +516,21 @@ sub delete_record($$) {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+q/DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
-    my $rv = $sth->execute( $name, $type, $content, $$domain );
+    my $rv = $sth->execute( $name, $type, $content, $domain );
 
     # Release server lock.
     $self->_unlock;
 
-    ( $rv > 0 ) ? return 1 : return 0;
+    return ( $rv > 0 ) ? 1 : 0;
 }
 
-=head2 update_record(\$rr1 , \$rr2 , \$domain)
+=head2 update_record(\@rr1 , \@rr2 , $domain)
 
 Updates a single record in the backend.
 
-Expects three scalar references:
+Expects three values...
 
 1) A reference to an array that contains the Resource Record to be updated;
    ($name , $type , $content) - all required.
@@ -529,7 +545,7 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_record($$$) {
+sub update_record {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
@@ -549,20 +565,20 @@ sub update_record($$$) {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? AND type=? AND content=? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
     my $rv = $sth->execute(
         $name2, $type2, $content2, $ttl, $prio,
-        $name1, $type1, $content1, $$domain
+        $name1, $type1, $content1, $domain
     );
 
     # Release server lock.
     $self->_unlock;
 
-    ( $rv > 0 ) ? return 1 : return 0;
+    return ( $rv > 0 ) ? 1 : 0;
 }
 
-=head2 update_records(\$rr1 , \$rr2 , \$domain)
+=head2 update_records(\@rr1 , \@rr2 , $domain)
 
 Can update multiple records in the backend.
 
@@ -570,7 +586,7 @@ Like update_record() but without the requirement that the 'content' be set in th
 also not limited to updating just one record, but can update any number of records that match the resource record you are
 looking for.
 
-Expects three scalar references:
+Expects three values...
 
 1) A reference to an array that contains the Resource Record to be updated;
    ($name , $type) - all required.
@@ -585,7 +601,7 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_records($$$) {
+sub update_records {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
@@ -611,19 +627,19 @@ sub update_records($$$) {
 # $rv is number of rows affected; it's OK for no rows to be affected; when duplicate data is being updated for example.
     my $rv =
       $sth->execute( $name2, $type2, $content2, $ttl, $prio, $name1, $type1,
-        $$domain );
+        $domain );
 
     # Release server lock.
     $self->_unlock;
 
-    ( $rv > 0 ) ? return 1 : return 0;
+    return ( $rv > 0 ) ? 1 : 0;
 }
 
-=head2 update_or_add_records(\$rr1 , \$rr2 , \$domain)
+=head2 update_or_add_records(\@rr1 , \@rr2 , $domain)
 
 Can update multiple records in the backend; will insert records if they don't already exist.
 
-Expects three scalar references:
+Expects three values...
 
 1) A reference to an array that contains the Resource Record to be updated;
    ($name , $type) - all required.
@@ -638,7 +654,7 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_or_add_records($$$) {
+sub update_or_add_records {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
@@ -659,9 +675,9 @@ sub update_or_add_records($$$) {
     # See if record exists in zone.
     my $sth =
       $self->{'dbh'}->prepare(
-'SELECT COUNT(*) FROM records WHERE name = ? AND type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?)'
+'SELECT COUNT(*) FROM records WHERE name = ? AND type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) --'
       );
-    unless ( $sth->execute( $name1, $type1, $$domain ) ) {
+    unless ( $sth->execute( $name1, $type1, $domain ) ) {
         $sth->_unlock;
         return 0;
     }
@@ -675,7 +691,7 @@ sub update_or_add_records($$$) {
 "INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?"
           );
         if (
-            $sth->execute( $name2, $type2, $content2, $ttl, $prio, $$domain ) <=
+            $sth->execute( $name2, $type2, $content2, $ttl, $prio, $domain ) <=
             0 )
         {
             $self->_unlock;
@@ -686,12 +702,12 @@ sub update_or_add_records($$$) {
     {
         my $sth =
           $self->{'dbh'}->prepare(
-"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
           );
         if (
             $sth->execute(
                 $name2, $type2, $content2, $ttl,
-                $prio,  $name1, $type1,    $$domain
+                $prio,  $name1, $type1,    $domain
             ) <= 0
           )
         {
@@ -705,15 +721,15 @@ sub update_or_add_records($$$) {
     return 1;
 }
 
-=head2 find_record_by_content(\$content , \$domain)
+=head2 find_record_by_content($content , $domain)
 
 Finds a specific (single) record in the backend.
-Expects two scalar references; the first is the content we are looking for, and the second is the domain to be checked.
+Expects two scalars; the first is the content we are looking for, and the second is the domain to be checked.
 Returns a reference to an array that contains the name and type from the found record, if any.
 
 =cut
 
-sub find_record_by_content($$) {
+sub find_record_by_content {
     my $self    = shift;
     my $content = shift;
     my $domain  = shift;
@@ -722,22 +738,22 @@ sub find_record_by_content($$) {
       $self->{'dbh'}->prepare(
 "SELECT name,type FROM records WHERE content = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
       );
-    $sth->execute( $$content, $$domain );
+    $sth->execute( $content, $domain );
 
     my @records = $sth->fetchrow_array;
 
     return \@records;
 }
 
-=head2 find_record_by_name(\$name, \$domain)
+=head2 find_record_by_name($name, $domain)
 
 Finds a specific (single) record in the backend.
-Expects two scalar references; the first is the name we are looking for, and the second is the domain to be checked.
+Expects two scalars; the first is the name we are looking for, and the second is the domain to be checked.
 Returns a reference to an array that contains the content and type from the found record, if any.
 
 =cut
 
-sub find_record_by_name($$) {
+sub find_record_by_name {
     my $self   = shift;
     my $name   = shift;
     my $domain = shift;
@@ -746,14 +762,14 @@ sub find_record_by_name($$) {
       $self->{'dbh'}->prepare(
 "SELECT content,type FROM records WHERE name = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
       );
-    $sth->execute( $$name, $$domain );
+    $sth->execute( $name, $domain );
 
     my @records = $sth->fetchrow_array;
 
     return \@records;
 }
 
-=head2 make_domain_native(\$domain)
+=head2 make_domain_native($domain)
 
 Makes the specified domain a 'NATIVE' domain.
 Expects one scalar reference which is the domain name to be updated.
@@ -761,19 +777,19 @@ Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub make_domain_native($) {
+sub make_domain_native {
     my $self   = shift;
     my $domain = shift;
 
     my $sth =
       $self->{'dbh'}
-      ->prepare("UPDATE domains set type='NATIVE' , master='' WHERE name=?");
-    if ( $sth->execute($$domain) != 1 ) { return 0; }
+      ->prepare(q/UPDATE domains SET type='NATIVE' , master='' WHERE name=? --/);
+    if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
 }
 
-=head2 make_domain_master(\$domain)
+=head2 make_domain_master($domain)
 
 Makes the specified domain a 'MASTER' domain.
 Expects one scalar reference which is the domain name to be updated.
@@ -781,72 +797,72 @@ Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub make_domain_master($) {
+sub make_domain_master {
     my $self   = shift;
     my $domain = shift;
 
     my $sth =
       $self->{'dbh'}
       ->prepare("UPDATE domains set type='MASTER' , master='' WHERE name=?");
-    if ( $sth->execute($$domain) != 1 ) { return 0; }
+    if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
 }
 
-=head2 get_domain_type(\$domain)
+=head2 get_domain_type($domain)
 
-Expects one scalar reference which is the domain name to query for.
+Expects one scalar which is the domain name to query for.
 Returns a string containing the PowerDNS 'type' of the domain given or
 'undef' if the domain does not exist in the backend or an empty string
 if the domain has no master (i.e. a NATIVE domain).
 
 =cut
 
-sub get_domain_type($) {
+sub get_domain_type {
     my $self   = shift;
     my $domain = shift;
     my $type   = '';
 
     my $sth =
-      $self->{'dbh'}->prepare("SELECT type FROM domains WHERE name = ?");
-    $sth->execute($$domain);
+      $self->{'dbh'}->prepare(q/SELECT type FROM domains WHERE name = ? --/);
+    $sth->execute($domain);
 
     ($type) = $sth->fetchrow_array;
     return $type;
 }
 
-=head2 get_master(\$domain)
+=head2 get_master($domain)
 
-Expects one scalar reference which is the domain name to query for.
+Expects one scalar which is the domain name to query for.
 Returns a string containing the PowerDNS 'master' of the domain given or
 'undef' if the domain does not exist in the PowerDNS backend or
 an empty string if the domain has no master (i.e. a NATIVE domain).
 
 =cut
 
-sub get_master($) {
+sub get_master {
     my $self   = shift;
     my $domain = shift;
     my $master = '';
 
     my $sth =
-      $self->{'dbh'}->prepare("SELECT master FROM domains WHERE name = ?");
-    $sth->execute($$domain);
+      $self->{'dbh'}->prepare(q/SELECT master FROM domains WHERE name = ? --/);
+    $sth->execute($domain);
 
     ($master) = $sth->fetchrow_array;
     return $master;
 }
 
-=head2 increment_serial(\$domain)
+=head2 increment_serial($domain)
 
 Increments the serial in the SOA by one.
 Assumes the serial is an eight digit date (YYYYMMDD) followed by a two digit increment.
-Expects one scalar reference which is the domain name to update.
+Expects one scalar which is the domain name to update.
 Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub increment_serial($) {
+sub increment_serial {
     my $self   = shift;
     my $domain = shift;
 
@@ -858,9 +874,9 @@ sub increment_serial($) {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"SELECT content FROM records WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/SELECT content FROM records WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
-    unless ( $sth->execute($$domain) ) {
+    unless ( $sth->execute($domain) ) {
         $self->_unlock;
         return 0;
     }
@@ -872,7 +888,7 @@ sub increment_serial($) {
 
     my @soa = split / /, $soa;
     my $soa_date = substr( $soa[2], 0, 8 );
-    my $now_date = `date +%Y%m%d`;
+    my $now_date = `date +%Y%m%d`; # FIXME
     chomp $now_date;
     my $soa_counter = substr( $soa[2], -2 );
 
@@ -889,9 +905,9 @@ sub increment_serial($) {
 
     $sth =
       $self->{'dbh'}->prepare(
-"UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
-    if ( $sth->execute( $new_soa, $$domain ) <= 0 ) {
+    if ( $sth->execute( $new_soa, $domain ) <= 0 ) {
         $self->_unlock;
         return 0;
     }
@@ -904,124 +920,143 @@ sub increment_serial($) {
 
 =head1 EXAMPLES
 
-	my $params = {	db_user			=>	'root',
-			db_pass			=>	'',
-			db_name			=>	'pdns',
-			db_port			=>	'3306',
-			db_host			=>	'localhost',
-			mysql_print_error	=>	1,
-			mysql_warn		=>	1,
-			mysql_auto_commit	=>	1,
-			mysql_auto_reconnect	=>	1,
-	};
+    my %params = (
+            db_user            =>    'root',
+            db_pass            =>    '',
+            db_name            =>    'pdns',
+            db_port            =>    '3306',
+            db_host            =>    'localhost',
+            mysql_print_error  =>    1,
+            mysql_warn         =>    1,
+            mysql_auto_commit  =>    1,
+            mysql_auto_reconnect =>  1,
+    );
 
-	my $pdns = PowerDNS::Backend::MySQL->new($params);
+    my $pdns = PowerDNS::Backend::MySQL->new(\%params);
 
-	my $domain = 'example.com';
-	my $master = '127.0.0.1';
+    my $domain = 'example.com';
+    my $master = '127.0.0.1';
 
-	unless ( $pdns->add_domain(\$domain) )
-        { print "Could not add domain : $domain \n"; }
+    unless ( $pdns->add_domain($domain) ) {
+        print "Could not add domain : $domain \n";
+    }
 
-        unless ( $pdns->add_master(\$domain) )
-        { print "Could not add master domain : $domain \n"; }
+    unless ( $pdns->add_master($domain) ) {
+        print "Could not add master domain : $domain \n";
+    }
 
-	unless ( $pdns->add_slave(\$domain,\$master) )
-        { print "Could not add slave domain : $domain \n"; }
+    unless ( $pdns->add_slave($domain,\$master) ) {
+        print "Could not add slave domain : $domain \n";
+    }
 
-	unless ( $pdns->delete_domain(\$domain) )
-	{ print "Could not delete domain : $domain \n"; }
+    unless ( $pdns->delete_domain($domain) ) {
+        print "Could not delete domain : $domain \n";
+    }
 
-	my $domain_names = $pdns->list_domain_names;
+    my $domain_names = $pdns->list_domain_names;
 
-	for my $domain (@$domain_names)
-	{ print "$domain \n"; }
+    for my $domain (@$domain_names) {
+        print "$domain \n";
+    }
 
-	my $type = 'NATIVE';
-	my $domain_names = $pdns->list_domain_names_by_type(\$type);
+    my $type = 'NATIVE';
+    my $domain_names = $pdns->list_domain_names_by_type($type);
 
-	for my $domain (@$domain_names)
-	{ print "$domain \n"; }
+    for my $domain (@$domain_names) {
+        print "$domain \n";
+    }
 
-	my $master = '127.0.0.1';
-	my $domain_names = $pdns->list_slave_domain_names(\$master);
+    my $master = '127.0.0.1';
+    my $domain_names = $pdns->list_slave_domain_names($master);
 
-	for my $domain (@$domain_names)
-	{ print "$domain \n"; }
+    for my $domain (@$domain_names) {
+        print "$domain \n";
+    }
 
-	if ( $pdns->domain_exists(\$domain) )
-	{ print "The domain $domain does exist. \n"; }
-	else
-	{ print "The domain $domain does NOT exist. \n"; }
+    if ( $pdns->domain_exists($domain) ) {
+        print "The domain $domain does exist. \n";
+    }
+    else {
+        print "The domain $domain does NOT exist. \n";
+    }
 
-	my $rr = 'CNAME';
-	my $records = $pdns->list_records(\$rr , \$domain);
-	for my $record  (@$records)
-	{ print "@$record\n"; }
+    my $rr = 'CNAME';
+    my $records = $pdns->list_records(\@rr , $domain);
+    for my $record  (@$records) {
+         print "@$record\n";
+    }
 
-	my @rr = ('www.example.com','CNAME','example.com');
-	unless ( $pdns->add_record( \@rr , \$domain) )
-	{ print "Could not add a RR for $domain \n"; }
+    my @rr = ('www.example.com','CNAME','example.com');
+    unless ( $pdns->add_record( \@rr , $domain) ) {
+        print "Could not add a RR for $domain \n";
+    }
 
-	unless ( $pdns->delete_record(\@rr , \$domain) )
-	{ print "Could not delete RR for $domain \n"; }
+    unless ( $pdns->delete_record(\@rr , $domain) ) {
+        print "Could not delete RR for $domain \n";
+    }
 
-	my $domain = 'example.com';
-	my @rr1 = ('localhost.example.com','A','127.0.0.1');
-	my @rr2 = ('localhost.example.com','CNAME','example.com');
+    my $domain = 'example.com';
+    my @rr1 = ('localhost.example.com','A','127.0.0.1');
+    my @rr2 = ('localhost.example.com','CNAME','example.com');
 
-	unless ( $pdns->update_record(\@rr1 , \@rr2 , \$domain) )
-	{ print "Update failed for $domain . \n"; }
+    unless ( $pdns->update_record(\@rr1 , \@rr2 , $domain) ) {
+        print "Update failed for $domain . \n";
+    }
 
-	my (@rr1,@rr2,$domain);
+    my (@rr1,@rr2,$domain);
 
-	@rr1 = ('example.com','MX');
-	@rr2 = ('example.com','MX','mx.example.com');
-	$domain = 'example.com';
+    @rr1 = ('example.com','MX');
+    @rr2 = ('example.com','MX','mx.example.com');
+    $domain = 'example.com';
 
-	unless ( $pdns->update_records( \@rr1 , \@rr2 , \$domain ) )
-	{ print "Update failed for $domain . \n"; }
+    unless ( $pdns->update_records( \@rr1 , \@rr2 , $domain ) ) {
+        print "Update failed for $domain . \n";
+    }
 
-	@rr1 = ('example.com','MX');
-	@rr2 = ('example.com','MX','mx.example.com');
-	$domain = 'example.com';
+    @rr1 = ('example.com','MX');
+    @rr2 = ('example.com','MX','mx.example.com');
+    $domain = 'example.com';
 
-	unless ( $pdns->update_or_add_records(\@rr1,\@rr2,\$domain) )
-	{ print "Could not update/add record.\n"; }
+    unless ( $pdns->update_or_add_records(\@rr1,\@rr2,$domain) ) {
+        print "Could not update/add record.\n";
+    }
 
-	my $domain = 'example.com';
-	my $content = 'localhost.example.com';
-	my $records = $pdns->find_record_by_content(\$content , \$domain);
-	my ($name , $type) = @$records;
-	print "Name: $name\n";
-	print "Type: $type\n";
+    my $domain = 'example.com';
+    my $content = 'localhost.example.com';
+    my $records = $pdns->find_record_by_content(\$content , $domain);
+    my ($name , $type) = @$records;
+    print "Name: $name\n";
+    print "Type: $type\n";
 
-	my $domain = 'example.com';
-	my $name = 'localhost.example.com';
-	my $records = $pdns->find_record_by_name(\$name, \$domain);
-	my ($content, $type) = @$records;
-	print "Content: $content\n";
-	print "Type: $type\n";
+    my $domain = 'example.com';
+    my $name = 'localhost.example.com';
+    my $records = $pdns->find_record_by_name(\$name, $domain);
+    my ($content, $type) = @$records;
+    print "Content: $content\n";
+    print "Type: $type\n";
 
-	my $domain = 'example.com';
-	$pdns->make_domain_native(\$domain);
+    my $domain = 'example.com';
+    $pdns->make_domain_native($domain);
 
-        my $domain = 'example.com';
-        $pdns->make_domain_master(\$domain);
+    my $domain = 'example.com';
+    $pdns->make_domain_master($domain);
 
-	my $domain = 'example.com';
-	my $type = $pdns->get_domain_type(\$domain);
-	if ( $type )
-	{ print "Type is '$type'\n"; }
-	else
-	{ print "Domain $domain does not exist.\n" }
+    my $domain = 'example.com';
+    my $type = $pdns->get_domain_type($domain);
+    if ( $type ) {
+        print "Type is '$type'\n";
+    }
+    else {
+        print "Domain $domain does not exist.\n"
+    }
 
-	my $master = $pdns->get_master(\$domain);
-	print "Master: $master\n";
+    my $master = $pdns->get_master($domain);
+    print "Master: $master\n";
 
-	my $domain = 'augnix.net';
-	unless ( $pdns->increment_serial(\$domain) )
-	{ print "Could not increment serial."; }
+    my $domain = 'augnix.net';
+    unless ( $pdns->increment_serial($domain) ) {
+        print "Could not increment serial.";
+    }
 
 =head1 NOTES
 
@@ -1088,7 +1123,7 @@ under the same terms as Perl itself.
 
 =head1 VERSION
 
-	0.11
+    0.11
 
 =cut
 
