@@ -1,6 +1,6 @@
-# Provides an interface to manipulate PowerDNS data in the MySQL Backend.
-
 package PowerDNS::Backend::MySQL;
+
+# ABSTRACT: Provides an interface to manipulate PowerDNS data in the MySQL Backend.
 
 use DBI;
 use Carp;
@@ -41,7 +41,7 @@ our $VERSION = '0.11';
 
 =head1 DESCRIPTION
 
-	PowerDNS::Backend::MySQL provides a layer of abstraction 
+	PowerDNS::Backend::MySQL provides a layer of abstraction
 	for manipulating the data stored in the PowerDNS MySQL backend.
 
 =head1 METHODS
@@ -65,7 +65,7 @@ our $VERSION = '0.11';
 
 	Creates a PowerDNS::Backend::MySQL object.
 
-=over 4 
+=over 4
 
 =item db_user
 
@@ -105,13 +105,13 @@ Used to set the DBD::mysql::mysql_auto_reconnect value.
 
 =item lock_name
 
-Critical sections (adds, deletes, updates on records) get MySQL application level locks 
+Critical sections (adds, deletes, updates on records) get MySQL application level locks
 (GET_LOCK : http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
 this option can be used to override the default lock name used in those calls.
 
 =item lock_timeout
 
-Critical sections (adds, deletes, updates on records) get MySQL application level locks 
+Critical sections (adds, deletes, updates on records) get MySQL application level locks
 (GET_LOCK : http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
 this option can be used to override the default lock timeout used in those calls.
 
@@ -248,7 +248,7 @@ sub add_master($) {
 
 =head2 add_slave(\$slave_domain , \$master_ip)
 
-Expects two scalar references; first the domain to slave, then the IP address to 
+Expects two scalar references; first the domain to slave, then the IP address to
 slave from.
 Returns 1 on success and 0 on failure.
 Updates the existing record if there is one, otherwise inserts a new record.
@@ -298,7 +298,7 @@ sub delete_domain($) {
 =head2 list_domain_names
 
 Does not expect anything.
-Returns a reference to an array which contains all the domain names 
+Returns a reference to an array which contains all the domain names
 listed in the PowerDNS backend.
 
 =cut
@@ -341,7 +341,7 @@ sub list_domain_names_by_type($) {
 =head2 list_slave_domain_names(\$master_ip)
 
 Expects a scalar reference to an IP address which is the master IP.
-Returns a reference to an array which contains all the slave domain names 
+Returns a reference to an array which contains all the slave domain names
 with $master as their 'master'.
 
 =cut
@@ -384,7 +384,7 @@ sub domain_exists($) {
 =head2 list_records(\$rr , \$domain)
 
 Expects two scalar references; the first to a resource record and the second to a domain name.
-Returns a reference to a two-dimensional array which contains the resource record name, content, 
+Returns a reference to a two-dimensional array which contains the resource record name, content,
 TTL, and priority if any.
 
 =cut
@@ -566,8 +566,8 @@ sub update_record($$$) {
 
 Can update multiple records in the backend.
 
-Like update_record() but without the requirement that the 'content' be set in the resource record(s) you are trying to update; 
-also not limited to updating just one record, but can update any number of records that match the resource record you are 
+Like update_record() but without the requirement that the 'content' be set in the resource record(s) you are trying to update;
+also not limited to updating just one record, but can update any number of records that match the resource record you are
 looking for.
 
 Expects three scalar references:
@@ -797,7 +797,7 @@ sub make_domain_master($) {
 
 Expects one scalar reference which is the domain name to query for.
 Returns a string containing the PowerDNS 'type' of the domain given or
-'undef' if the domain does not exist in the backend or an empty string 
+'undef' if the domain does not exist in the backend or an empty string
 if the domain has no master (i.e. a NATIVE domain).
 
 =cut
@@ -948,28 +948,28 @@ sub increment_serial($) {
 
 	for my $domain (@$domain_names)
 	{ print "$domain \n"; }
-	
+
 	if ( $pdns->domain_exists(\$domain) )
 	{ print "The domain $domain does exist. \n"; }
 	else
 	{ print "The domain $domain does NOT exist. \n"; }
-	
+
 	my $rr = 'CNAME';
 	my $records = $pdns->list_records(\$rr , \$domain);
 	for my $record  (@$records)
 	{ print "@$record\n"; }
-	
+
 	my @rr = ('www.example.com','CNAME','example.com');
 	unless ( $pdns->add_record( \@rr , \$domain) )
 	{ print "Could not add a RR for $domain \n"; }
-	
+
 	unless ( $pdns->delete_record(\@rr , \$domain) )
 	{ print "Could not delete RR for $domain \n"; }
-	
+
 	my $domain = 'example.com';
 	my @rr1 = ('localhost.example.com','A','127.0.0.1');
 	my @rr2 = ('localhost.example.com','CNAME','example.com');
-	
+
 	unless ( $pdns->update_record(\@rr1 , \@rr2 , \$domain) )
 	{ print "Update failed for $domain . \n"; }
 
@@ -988,7 +988,7 @@ sub increment_serial($) {
 
 	unless ( $pdns->update_or_add_records(\@rr1,\@rr2,\$domain) )
 	{ print "Could not update/add record.\n"; }
-	
+
 	my $domain = 'example.com';
 	my $content = 'localhost.example.com';
 	my $records = $pdns->find_record_by_content(\$content , \$domain);
@@ -1025,7 +1025,7 @@ sub increment_serial($) {
 
 =head1 NOTES
 
-Because PowerDNS::Backend::MySQL uses DBI you can get the last DBI error from the 
+Because PowerDNS::Backend::MySQL uses DBI you can get the last DBI error from the
 global variable "$DBI::errstr"; this can be handy when you want more details as to
 why a particular method failed.
 
