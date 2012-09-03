@@ -119,88 +119,93 @@ this option can be used to override the default lock timeout used in those calls
 
 =cut
 
-sub new
-{
-	my $class = shift;
-	my $params= shift;
-	my $self  = {};
+sub new {
+    my $class  = shift;
+    my $params = shift;
+    my $self   = {};
 
-	bless $self , ref $class || $class;
-	
-	my $db_user = defined $params->{db_user} ? $params->{db_user} : 'root';
-	my $db_pass = defined $params->{db_pass} ? $params->{db_pass} : '';
-	my $db_name = defined $params->{db_name} ? $params->{db_name} : 'pdns';
-	my $db_port = defined $params->{db_port} ? $params->{db_port} : '3306';
-	my $db_host = defined $params->{db_host} ? $params->{db_host} : 'localhost';
+    bless $self, ref $class || $class;
 
-	$self->{'lock_name'} = defined $params->{lock_name} ? $params->{lock_name} : 'powerdns_backend_mysql';
-	$self->{'lock_timeout'} = defined $params->{lock_timeout} ? $params->{lock_timeout} : 3;
+    my $db_user = defined $params->{db_user} ? $params->{db_user} : 'root';
+    my $db_pass = defined $params->{db_pass} ? $params->{db_pass} : '';
+    my $db_name = defined $params->{db_name} ? $params->{db_name} : 'pdns';
+    my $db_port = defined $params->{db_port} ? $params->{db_port} : '3306';
+    my $db_host = defined $params->{db_host} ? $params->{db_host} : 'localhost';
 
-	my $mysql_print_error = $params->{mysql_print_error} ? defined $params->{mysql_print_error} : 1;
-	my $mysql_warn = $params->{mysql_warn} ? defined $params->{mysql_warn} : 1;
-	my $mysql_auto_commit = $params->{mysql_auto_commit} ? defined $params->{mysql_auto_commit} : 1;
+    $self->{'lock_name'} =
+      defined $params->{lock_name}
+      ? $params->{lock_name}
+      : 'powerdns_backend_mysql';
+    $self->{'lock_timeout'} =
+      defined $params->{lock_timeout} ? $params->{lock_timeout} : 3;
 
-	my $mysql_auto_reconnect = $params->{mysql_auto_reconnect} ? defined $params->{mysql_auto_reconnect} : 1;
+    my $mysql_print_error =
+      $params->{mysql_print_error} ? defined $params->{mysql_print_error} : 1;
+    my $mysql_warn = $params->{mysql_warn} ? defined $params->{mysql_warn} : 1;
+    my $mysql_auto_commit =
+      $params->{mysql_auto_commit} ? defined $params->{mysql_auto_commit} : 1;
 
-	my $db_DSN  = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
+    my $mysql_auto_reconnect =
+      $params->{mysql_auto_reconnect}
+      ? defined $params->{mysql_auto_reconnect}
+      : 1;
 
-	$self->{'dbh'} = DBI->connect($db_DSN, $db_user, $db_pass, 
-		{
-			'PrintError' => $mysql_print_error,
-			'Warn' => $mysql_warn, 
-			'AutoCommit' => $mysql_auto_commit,
-		});
-	$self->{'dbh'}->{'mysql_auto_reconnect'} = $mysql_auto_reconnect;
-	
-	$self->{'error_msg'} = undef;
+    my $db_DSN = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
 
-	return $self;
+    $self->{'dbh'} = DBI->connect(
+        $db_DSN, $db_user, $db_pass,
+        {
+            'PrintError' => $mysql_print_error,
+            'Warn'       => $mysql_warn,
+            'AutoCommit' => $mysql_auto_commit,
+        }
+    );
+    $self->{'dbh'}->{'mysql_auto_reconnect'} = $mysql_auto_reconnect;
+
+    $self->{'error_msg'} = undef;
+
+    return $self;
 }
 
-sub DESTROY
-{
-	my $self = shift;
-	if ( defined $self->{'dbh'} )
-	{
-		delete $self->{'dbh'} or warn "$!\n";
-	}
+sub DESTROY {
+    my $self = shift;
+    if ( defined $self->{'dbh'} ) {
+        delete $self->{'dbh'} or warn "$!\n";
+    }
 }
 
 # Internal Method.
 # Get a lock on the database to avoid race conditions.
 # Returns 1 on success and 0 on failure.
-sub _lock
-{
-        my $self = shift;
-	my $lock_name = $self->{'lock_name'};
-	my $lock_timeout = $self->{'lock_timeout'};
+sub _lock {
+    my $self         = shift;
+    my $lock_name    = $self->{'lock_name'};
+    my $lock_timeout = $self->{'lock_timeout'};
 
-        my $sth = $self->{'dbh'}->prepare("SELECT GET_LOCK('$lock_name',$lock_timeout)");
-        if ( ! $sth->execute )
-        {
-             return 0;
-        }
+    my $sth =
+      $self->{'dbh'}->prepare("SELECT GET_LOCK('$lock_name',$lock_timeout)");
+    if ( !$sth->execute ) {
+        return 0;
+    }
 
-        my ($rv) = $sth->fetchrow_array;
-        return $rv;
+    my ($rv) = $sth->fetchrow_array;
+    return $rv;
 }
 
 # Internal Method.
 # Release a lock on the database.
 # Returns 1 on success and 0 on failure.
-sub _unlock
-{
-        my $self = shift;
-	my $lock_name = $self->{'lock_name'};
+sub _unlock {
+    my $self      = shift;
+    my $lock_name = $self->{'lock_name'};
 
-        my $sth = $self->{'dbh'}->prepare("SELECT RELEASE_LOCK('$lock_name')");
-        if ( ! $sth->execute )
-        {
-             return 0;
-        }
+    my $sth = $self->{'dbh'}->prepare("SELECT RELEASE_LOCK('$lock_name')");
+    if ( !$sth->execute ) {
+        return 0;
+    }
 
-        my ($rv) = $sth->fetchrow_array;
-        return $rv;
+    my ($rv) = $sth->fetchrow_array;
+    return $rv;
 }
 
 =head2 add_domain(\$domain)
@@ -210,15 +215,16 @@ Returns 1 on success and 0 on failure.
 
 =cut
 
-sub add_domain($) 
-{
-	my $self = shift;
-	my $domain = shift;
-	
-	my $sth = $self->{'dbh'}->prepare("INSERT INTO domains (name,type) VALUES (?,'NATIVE')");
-	if ( $sth->execute($$domain) != 1 ) { return 0; }
+sub add_domain($) {
+    my $self   = shift;
+    my $domain = shift;
 
-	return 1;
+    my $sth =
+      $self->{'dbh'}
+      ->prepare("INSERT INTO domains (name,type) VALUES (?,'NATIVE')");
+    if ( $sth->execute($$domain) != 1 ) { return 0; }
+
+    return 1;
 }
 
 =head2 add_master(\$domain)
@@ -228,15 +234,16 @@ Returns 1 on success and 0 on failure.
 
 =cut
 
-sub add_master($)
-{
-        my $self = shift;
-        my $domain = shift;
+sub add_master($) {
+    my $self   = shift;
+    my $domain = shift;
 
-        my $sth = $self->{'dbh'}->prepare("INSERT INTO domains (name,type) VALUES (?,'MASTER')");
-        if ( $sth->execute($$domain) != 1 ) { return 0; }
+    my $sth =
+      $self->{'dbh'}
+      ->prepare("INSERT INTO domains (name,type) VALUES (?,'MASTER')");
+    if ( $sth->execute($$domain) != 1 ) { return 0; }
 
-        return 1;
+    return 1;
 }
 
 =head2 add_slave(\$slave_domain , \$master_ip)
@@ -248,25 +255,26 @@ Updates the existing record if there is one, otherwise inserts a new record.
 
 =cut
 
-sub add_slave($$)
-{
-	my $self   = shift;
-	my $domain = shift;
-	my $master = shift;
-	my $sth;
+sub add_slave($$) {
+    my $self   = shift;
+    my $domain = shift;
+    my $master = shift;
+    my $sth;
 
-	if ( $self->domain_exists($domain) )
-	{
-		$sth = $self->{'dbh'}->prepare("UPDATE domains set master = ? , type = 'SLAVE' WHERE name = ?");
-	        if ( $sth->execute($$master,$$domain) != 1 ) { return 0; }
-	}
-	else
-	{
-		$sth = $self->{'dbh'}->prepare("INSERT INTO domains (name,master,type) VALUES(?,?,'SLAVE')");
-	        if ( $sth->execute($$domain,$$master) != 1 ) { return 0; }
-	}
+    if ( $self->domain_exists($domain) ) {
+        $sth =
+          $self->{'dbh'}->prepare(
+            "UPDATE domains set master = ? , type = 'SLAVE' WHERE name = ?");
+        if ( $sth->execute( $$master, $$domain ) != 1 ) { return 0; }
+    }
+    else {
+        $sth =
+          $self->{'dbh'}->prepare(
+            "INSERT INTO domains (name,master,type) VALUES(?,?,'SLAVE')");
+        if ( $sth->execute( $$domain, $$master ) != 1 ) { return 0; }
+    }
 
-	return 1;
+    return 1;
 }
 
 =head2 delete_domain(\$domain)
@@ -276,16 +284,15 @@ Returns 1 on success and 0 on failure.
 
 =cut
 
-sub delete_domain($) 
-{
-	my $self = shift;
-	my $domain = shift;
-		
-	# Remove domain.
-	my $sth = $self->{'dbh'}->prepare("DELETE FROM domains WHERE name = ?");
-	if ( $sth->execute($$domain) != 1 ) { return 0; }
-	
-	return 1;
+sub delete_domain($) {
+    my $self   = shift;
+    my $domain = shift;
+
+    # Remove domain.
+    my $sth = $self->{'dbh'}->prepare("DELETE FROM domains WHERE name = ?");
+    if ( $sth->execute($$domain) != 1 ) { return 0; }
+
+    return 1;
 }
 
 =head2 list_domain_names
@@ -296,19 +303,17 @@ listed in the PowerDNS backend.
 
 =cut
 
-sub list_domain_names
-{
-	my $self = shift;
-	my @domains;
+sub list_domain_names {
+    my $self = shift;
+    my @domains;
 
-	# Grab the domain names.
-	my $sth = $self->{'dbh'}->prepare("SELECT name FROM domains");
-	$sth->execute;
+    # Grab the domain names.
+    my $sth = $self->{'dbh'}->prepare("SELECT name FROM domains");
+    $sth->execute;
 
-	while ( my ($domain) = $sth->fetchrow_array )
-	{ push @domains , $domain; }
+    while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
 
-	return \@domains;
+    return \@domains;
 }
 
 =head2 list_domain_names_by_type(\$type)
@@ -318,20 +323,19 @@ Returns a reference to an array which contains all the domain names of that type
 
 =cut
 
-sub list_domain_names_by_type($)
-{
-	my $self = shift;
-	my $type = shift;
-	my @domains;
+sub list_domain_names_by_type($) {
+    my $self = shift;
+    my $type = shift;
+    my @domains;
 
-	# Grab the domain names.
-	my $sth = $self->{'dbh'}->prepare("SELECT name FROM domains WHERE type = ?");
-	$sth->execute($$type);
+    # Grab the domain names.
+    my $sth =
+      $self->{'dbh'}->prepare("SELECT name FROM domains WHERE type = ?");
+    $sth->execute($$type);
 
-	while ( my ($domain) = $sth->fetchrow_array )
-	{ push @domains , $domain; }
+    while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
 
-	return \@domains;
+    return \@domains;
 }
 
 =head2 list_slave_domain_names(\$master_ip)
@@ -342,20 +346,20 @@ with $master as their 'master'.
 
 =cut
 
-sub list_slave_domain_names($)
-{
-	my $self = shift;
-	my $master = shift;
-	my @domains;
+sub list_slave_domain_names($) {
+    my $self   = shift;
+    my $master = shift;
+    my @domains;
 
-	# Grab the domain names.
-	my $sth = $self->{'dbh'}->prepare("SELECT name FROM domains WHERE TYPE = 'SLAVE' AND master = ?");
-	$sth->execute($$master);
+    # Grab the domain names.
+    my $sth =
+      $self->{'dbh'}
+      ->prepare("SELECT name FROM domains WHERE TYPE = 'SLAVE' AND master = ?");
+    $sth->execute($$master);
 
-	while ( my ($domain) = $sth->fetchrow_array )
-	{ push @domains , $domain; }
+    while ( my ($domain) = $sth->fetchrow_array ) { push @domains, $domain; }
 
-	return \@domains;
+    return \@domains;
 }
 
 =head2 domain_exists(\$domain)
@@ -365,17 +369,16 @@ Returns 1 if the domain name is found, and 0 if it is not found.
 
 =cut
 
-sub domain_exists($)
-{
-	my $self = shift;
-	my $domain = shift;
-	
-	my $sth = $self->{'dbh'}->prepare("SELECT id FROM domains WHERE name = ?");
-	$sth->execute($$domain) or return 0;
-	
-	my @record = $sth->fetchrow_array;
-	
-	scalar(@record) ? return 1 : return 0;
+sub domain_exists($) {
+    my $self   = shift;
+    my $domain = shift;
+
+    my $sth = $self->{'dbh'}->prepare("SELECT id FROM domains WHERE name = ?");
+    $sth->execute($$domain) or return 0;
+
+    my @record = $sth->fetchrow_array;
+
+    scalar(@record) ? return 1 : return 0;
 }
 
 =head2 list_records(\$rr , \$domain)
@@ -386,20 +389,23 @@ TTL, and priority if any.
 
 =cut
 
-sub list_records($$)
-{
-	my $self = shift;
-	my $rr = shift;
-	my $domain = shift;
-	my @records;
-	
-	my $sth = $self->{'dbh'}->prepare("SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?)");
-	$sth->execute($$rr,$$domain);
-	
-	while ( my ($name,$content,$ttl,$prio) = $sth->fetchrow_array )
-	{ push @records , [ ($name,$content,$ttl,$prio) ]; } # push anonymous array on to end.
-	
-	return \@records;
+sub list_records($$) {
+    my $self   = shift;
+    my $rr     = shift;
+    my $domain = shift;
+    my @records;
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+      );
+    $sth->execute( $$rr, $$domain );
+
+    while ( my ( $name, $content, $ttl, $prio ) = $sth->fetchrow_array ) {
+        push @records, [ ( $name, $content, $ttl, $prio ) ];
+    }    # push anonymous array on to end.
+
+    return \@records;
 }
 
 =head2 list_all_records(\$domain)
@@ -410,19 +416,23 @@ content, TTL, and priority if any of the supplied domain.
 
 =cut
 
-sub list_all_records($)
-{
-	my $self = shift;
-	my $domain = shift;
-	my @records;
-	
-	my $sth = $self->{'dbh'}->prepare("SELECT name,type,content,ttl,prio FROM records WHERE domain_id = (SELECT id FROM domains WHERE name = ?)");
-	$sth->execute($$domain);
-	
-	while ( my ($name,$type,$content,$ttl,$prio) = $sth->fetchrow_array )
-	{ push @records , [ ($name,$type,$content,$ttl,$prio) ]; } # push anonymous array on to end.
-	
-	return \@records;
+sub list_all_records($) {
+    my $self   = shift;
+    my $domain = shift;
+    my @records;
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"SELECT name,type,content,ttl,prio FROM records WHERE domain_id = (SELECT id FROM domains WHERE name = ?)"
+      );
+    $sth->execute($$domain);
+
+    while ( my ( $name, $type, $content, $ttl, $prio ) = $sth->fetchrow_array )
+    {
+        push @records, [ ( $name, $type, $content, $ttl, $prio ) ];
+    }    # push anonymous array on to end.
+
+    return \@records;
 }
 
 =head2 add_record(\$rr , \$domain)
@@ -435,35 +445,35 @@ Returns 1 if the record was successfully added, and 0 if not.
 
 =cut
 
-sub add_record($$)
-{
-	my $self = shift;
-	my $rr = shift;
-	my $domain = shift;
-	my ($name , $type , $content , $ttl , $prio) = @$rr;
-	
-	# Default values.
-	if ( ! defined $ttl or $ttl eq '' ) { $ttl = 7200; }
-	if ( ! defined $prio or $prio eq '' ) { $prio = 0; }
+sub add_record($$) {
+    my $self   = shift;
+    my $rr     = shift;
+    my $domain = shift;
+    my ( $name, $type, $content, $ttl, $prio ) = @$rr;
 
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
+    # Default values.
+    if ( !defined $ttl  or $ttl  eq '' ) { $ttl  = 7200; }
+    if ( !defined $prio or $prio eq '' ) { $prio = 0; }
 
-	my $sth = $self->{'dbh'}->prepare("INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?");
-	if ( $sth->execute($name,$type,$content,$ttl,$prio,$$domain) <= 0 )
-	{
-		$self->_unlock;
-		return 0;
-	}
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
 
-	# Release server lock.
-	$self->_unlock;
-	
-	return 1;
+    my $sth =
+      $self->{'dbh'}->prepare(
+"INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?"
+      );
+    if ( $sth->execute( $name, $type, $content, $ttl, $prio, $$domain ) <= 0 ) {
+        $self->_unlock;
+        return 0;
+    }
+
+    # Release server lock.
+    $self->_unlock;
+
+    return 1;
 }
 
 =head2 delete_record(\$rr , \$domain)
@@ -476,27 +486,28 @@ Returns 1 if the record was successfully deleted, and 0 if not.
 
 =cut
 
-sub delete_record($$)
-{
-	my $self = shift;
-	my $rr = shift;
-	my $domain = shift;
-	my ($name , $type , $content) = @$rr;
+sub delete_record($$) {
+    my $self   = shift;
+    my $rr     = shift;
+    my $domain = shift;
+    my ( $name, $type, $content ) = @$rr;
 
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
-	
-	my $sth = $self->{'dbh'}->prepare("DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1");
-	my $rv = $sth->execute($name,$type,$content,$$domain);
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
 
-	# Release server lock.
-	$self->_unlock;
+    my $sth =
+      $self->{'dbh'}->prepare(
+"DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+      );
+    my $rv = $sth->execute( $name, $type, $content, $$domain );
 
-	($rv > 0) ? return 1 : return 0;
+    # Release server lock.
+    $self->_unlock;
+
+    ( $rv > 0 ) ? return 1 : return 0;
 }
 
 =head2 update_record(\$rr1 , \$rr2 , \$domain)
@@ -518,33 +529,37 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_record($$$)
-{
-	my $self = shift;
-	my $rr1 = shift;
-	my $rr2 = shift;
-	my $domain = shift;
-	my ($name1 , $type1 , $content1) = @$rr1;
-	my ($name2 , $type2 , $content2 , $ttl , $prio) = @$rr2;
-	
-	# Default values.
-	if ( ! defined $ttl or $ttl eq '' ) { $ttl = 7200; }
-	if ( ! defined $prio or $prio eq '' ) { $prio = 0; }
-	
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
+sub update_record($$$) {
+    my $self   = shift;
+    my $rr1    = shift;
+    my $rr2    = shift;
+    my $domain = shift;
+    my ( $name1, $type1, $content1 ) = @$rr1;
+    my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
-	my $sth = $self->{'dbh'}->prepare("UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1");
-	my $rv = $sth->execute($name2,$type2,$content2,$ttl,$prio,$name1,$type1,$content1,$$domain);
+    # Default values.
+    if ( !defined $ttl  or $ttl  eq '' ) { $ttl  = 7200; }
+    if ( !defined $prio or $prio eq '' ) { $prio = 0; }
 
-	# Release server lock.
-	$self->_unlock;
-	
-	($rv > 0) ? return 1 : return 0;
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+      );
+    my $rv = $sth->execute(
+        $name2, $type2, $content2, $ttl, $prio,
+        $name1, $type1, $content1, $$domain
+    );
+
+    # Release server lock.
+    $self->_unlock;
+
+    ( $rv > 0 ) ? return 1 : return 0;
 }
 
 =head2 update_records(\$rr1 , \$rr2 , \$domain)
@@ -570,34 +585,38 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_records($$$)
-{
-	my $self = shift;
-	my $rr1 = shift;
-	my $rr2 = shift;
-	my $domain = shift;
-	my ($name1 , $type1 ) = @$rr1;
-	my ($name2 , $type2 , $content2 , $ttl , $prio) = @$rr2;
-	
-	# Default values.
-	if ( ! defined $ttl or $ttl eq '' ) { $ttl = 7200; }
-	if ( ! defined $prio or $prio eq '' ) { $prio = 0; }
-	
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
+sub update_records($$$) {
+    my $self   = shift;
+    my $rr1    = shift;
+    my $rr2    = shift;
+    my $domain = shift;
+    my ( $name1, $type1 ) = @$rr1;
+    my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
-	my $sth = $self->{'dbh'}->prepare("UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)");
-	# $rv is number of rows affected; it's OK for no rows to be affected; when duplicate data is being updated for example.
-	my $rv = $sth->execute($name2,$type2,$content2,$ttl,$prio,$name1,$type1,$$domain);
-	
-	# Release server lock.
-	$self->_unlock;
+    # Default values.
+    if ( !defined $ttl  or $ttl  eq '' ) { $ttl  = 7200; }
+    if ( !defined $prio or $prio eq '' ) { $prio = 0; }
 
-	($rv > 0) ? return 1 : return 0;
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+      );
+
+# $rv is number of rows affected; it's OK for no rows to be affected; when duplicate data is being updated for example.
+    my $rv =
+      $sth->execute( $name2, $type2, $content2, $ttl, $prio, $name1, $type1,
+        $$domain );
+
+    # Release server lock.
+    $self->_unlock;
+
+    ( $rv > 0 ) ? return 1 : return 0;
 }
 
 =head2 update_or_add_records(\$rr1 , \$rr2 , \$domain)
@@ -619,58 +638,71 @@ Returns 1 on a successful update, and 0 when un-successful.
 
 =cut
 
-sub update_or_add_records($$$)
-{
-	my $self = shift;
-	my $rr1 = shift;
-	my $rr2 = shift;
-	my $domain = shift;
-	my ($name1 , $type1 ) = @$rr1;
-	my ($name2 , $type2 , $content2 , $ttl , $prio) = @$rr2;
-	
-	# Default values.
-	if ( ! defined $ttl or $ttl eq '' ) { $ttl = 7200; }
-	if ( ! defined $prio or $prio eq '' ) { $prio = 0; }
+sub update_or_add_records($$$) {
+    my $self   = shift;
+    my $rr1    = shift;
+    my $rr2    = shift;
+    my $domain = shift;
+    my ( $name1, $type1 ) = @$rr1;
+    my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
+    # Default values.
+    if ( !defined $ttl  or $ttl  eq '' ) { $ttl  = 7200; }
+    if ( !defined $prio or $prio eq '' ) { $prio = 0; }
 
-	# See if record exists in zone.
-	my $sth = $self->{'dbh'}->prepare('SELECT COUNT(*) FROM records WHERE name = ? AND type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?)');
-	unless ( $sth->execute($name1,$type1,$$domain) )
-	{
-		$sth->_unlock;
-		return 0;
-	}
-	
-	my ($count) = $sth->fetchrow_array;
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
 
-	if ( $count == 0 ) # Add new record to zone.
-	{ 
-		my $sth = $self->{'dbh'}->prepare("INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?");
-		if ( $sth->execute($name2,$type2,$content2,$ttl,$prio,$$domain) <= 0 )
-		{
-			$self->_unlock;
-			return 0;
-		}
-	}
-	else # Update existing record in zone.
-	{
-		my $sth = $self->{'dbh'}->prepare("UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)");
-		if ( $sth->execute($name2,$type2,$content2,$ttl,$prio,$name1,$type1,$$domain) <=0 )
-		{
-			$self->_unlock;
-			return 0;
-		}
-	}
+    # See if record exists in zone.
+    my $sth =
+      $self->{'dbh'}->prepare(
+'SELECT COUNT(*) FROM records WHERE name = ? AND type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?)'
+      );
+    unless ( $sth->execute( $name1, $type1, $$domain ) ) {
+        $sth->_unlock;
+        return 0;
+    }
 
-	# Release server lock.
-	$self->_unlock;
-	return 1;
+    my ($count) = $sth->fetchrow_array;
+
+    if ( $count == 0 )    # Add new record to zone.
+    {
+        my $sth =
+          $self->{'dbh'}->prepare(
+"INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?"
+          );
+        if (
+            $sth->execute( $name2, $type2, $content2, $ttl, $prio, $$domain ) <=
+            0 )
+        {
+            $self->_unlock;
+            return 0;
+        }
+    }
+    else    # Update existing record in zone.
+    {
+        my $sth =
+          $self->{'dbh'}->prepare(
+"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+          );
+        if (
+            $sth->execute(
+                $name2, $type2, $content2, $ttl,
+                $prio,  $name1, $type1,    $$domain
+            ) <= 0
+          )
+        {
+            $self->_unlock;
+            return 0;
+        }
+    }
+
+    # Release server lock.
+    $self->_unlock;
+    return 1;
 }
 
 =head2 find_record_by_content(\$content , \$domain)
@@ -681,18 +713,20 @@ Returns a reference to an array that contains the name and type from the found r
 
 =cut
 
-sub find_record_by_content($$)
-{
-	my $self = shift;
-	my $content = shift;
-	my $domain = shift;
-	
-	my $sth = $self->{'dbh'}->prepare("SELECT name,type FROM records WHERE content = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1");
-	$sth->execute($$content,$$domain);
-	
-	 my @records = $sth->fetchrow_array;
-	
-	return \@records;
+sub find_record_by_content($$) {
+    my $self    = shift;
+    my $content = shift;
+    my $domain  = shift;
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"SELECT name,type FROM records WHERE content = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+      );
+    $sth->execute( $$content, $$domain );
+
+    my @records = $sth->fetchrow_array;
+
+    return \@records;
 }
 
 =head2 find_record_by_name(\$name, \$domain)
@@ -703,18 +737,20 @@ Returns a reference to an array that contains the content and type from the foun
 
 =cut
 
-sub find_record_by_name($$)
-{
-	my $self = shift;
-	my $name = shift;
-	my $domain = shift;
-	
-	my $sth = $self->{'dbh'}->prepare("SELECT content,type FROM records WHERE name = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1");
-	$sth->execute($$name,$$domain);
-	
-	 my @records = $sth->fetchrow_array;
-	
-	return \@records;
+sub find_record_by_name($$) {
+    my $self   = shift;
+    my $name   = shift;
+    my $domain = shift;
+
+    my $sth =
+      $self->{'dbh'}->prepare(
+"SELECT content,type FROM records WHERE name = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+      );
+    $sth->execute( $$name, $$domain );
+
+    my @records = $sth->fetchrow_array;
+
+    return \@records;
 }
 
 =head2 make_domain_native(\$domain)
@@ -725,15 +761,16 @@ Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub make_domain_native($)
-{
-	my $self = shift;
-	my $domain = shift;
+sub make_domain_native($) {
+    my $self   = shift;
+    my $domain = shift;
 
-	my $sth = $self->{'dbh'}->prepare("UPDATE domains set type='NATIVE' , master='' WHERE name=?");
-	if ( $sth->execute($$domain) != 1 ) { return 0; }
+    my $sth =
+      $self->{'dbh'}
+      ->prepare("UPDATE domains set type='NATIVE' , master='' WHERE name=?");
+    if ( $sth->execute($$domain) != 1 ) { return 0; }
 
-	return 1;
+    return 1;
 }
 
 =head2 make_domain_master(\$domain)
@@ -744,15 +781,16 @@ Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub make_domain_master($)
-{
-        my $self = shift;
-        my $domain = shift;
+sub make_domain_master($) {
+    my $self   = shift;
+    my $domain = shift;
 
-        my $sth = $self->{'dbh'}->prepare("UPDATE domains set type='MASTER' , master='' WHERE name=?");
-        if ( $sth->execute($$domain) != 1 ) { return 0; }
+    my $sth =
+      $self->{'dbh'}
+      ->prepare("UPDATE domains set type='MASTER' , master='' WHERE name=?");
+    if ( $sth->execute($$domain) != 1 ) { return 0; }
 
-        return 1;
+    return 1;
 }
 
 =head2 get_domain_type(\$domain)
@@ -764,17 +802,17 @@ if the domain has no master (i.e. a NATIVE domain).
 
 =cut
 
-sub get_domain_type($)
-{
-	my $self = shift;
-	my $domain = shift;
-	my $type = '';
+sub get_domain_type($) {
+    my $self   = shift;
+    my $domain = shift;
+    my $type   = '';
 
-	my $sth = $self->{'dbh'}->prepare("SELECT type FROM domains WHERE name = ?");
-	$sth->execute($$domain);
+    my $sth =
+      $self->{'dbh'}->prepare("SELECT type FROM domains WHERE name = ?");
+    $sth->execute($$domain);
 
-	($type) = $sth->fetchrow_array;
-	return $type;
+    ($type) = $sth->fetchrow_array;
+    return $type;
 }
 
 =head2 get_master(\$domain)
@@ -786,17 +824,17 @@ an empty string if the domain has no master (i.e. a NATIVE domain).
 
 =cut
 
-sub get_master($)
-{
-	my $self   = shift;
-	my $domain = shift;
-	my $master = '';
+sub get_master($) {
+    my $self   = shift;
+    my $domain = shift;
+    my $master = '';
 
-	my $sth = $self->{'dbh'}->prepare("SELECT master FROM domains WHERE name = ?");
-	$sth->execute($$domain);
+    my $sth =
+      $self->{'dbh'}->prepare("SELECT master FROM domains WHERE name = ?");
+    $sth->execute($$domain);
 
-	($master) = $sth->fetchrow_array;
-	return $master;
+    ($master) = $sth->fetchrow_array;
+    return $master;
 }
 
 =head2 increment_serial(\$domain)
@@ -808,59 +846,58 @@ Returns 1 upon succes and 0 otherwise.
 
 =cut
 
-sub increment_serial($)
-{
-	my $self = shift;
-	my $domain = shift;
+sub increment_serial($) {
+    my $self   = shift;
+    my $domain = shift;
 
-	# Get a server lock to avoid race condition.
-	if ( ! $self->_lock )
-	{
-		carp("Could not obtain lock.\n");
-		return 0;
-	}
+    # Get a server lock to avoid race condition.
+    if ( !$self->_lock ) {
+        carp("Could not obtain lock.\n");
+        return 0;
+    }
 
-	my $sth = $self->{'dbh'}->prepare("SELECT content FROM records WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)");
-	unless ( $sth->execute($$domain) )
-	{
-		$self->_unlock;
-		return 0;
-	}
+    my $sth =
+      $self->{'dbh'}->prepare(
+"SELECT content FROM records WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)"
+      );
+    unless ( $sth->execute($$domain) ) {
+        $self->_unlock;
+        return 0;
+    }
 
-	# Grab and split SOA into parts.
-	my $soa = $sth->fetchrow_array;
+    # Grab and split SOA into parts.
+    my $soa = $sth->fetchrow_array;
 
-	unless ($soa)
-	{ return 0; }
-	
-	my @soa = split / / , $soa;
-	my $soa_date = substr($soa[2],0,8);
-	my $now_date = `date +%Y%m%d`; 
-	chomp $now_date;
-	my $soa_counter = substr($soa[2],-2);
+    unless ($soa) { return 0; }
 
-	if ( $soa_date != $now_date )
-	{
-		$soa[2] = $now_date . '00';
-	}
-	else
-	{
-		$soa_counter++;
-		$soa_counter %= 100;
-		$soa[2] = $now_date . sprintf('%02d',$soa_counter);
-	}
+    my @soa = split / /, $soa;
+    my $soa_date = substr( $soa[2], 0, 8 );
+    my $now_date = `date +%Y%m%d`;
+    chomp $now_date;
+    my $soa_counter = substr( $soa[2], -2 );
 
-	my $new_soa = join ' ' , @soa;
+    if ( $soa_date != $now_date ) {
+        $soa[2] = $now_date . '00';
+    }
+    else {
+        $soa_counter++;
+        $soa_counter %= 100;
+        $soa[2] = $now_date . sprintf( '%02d', $soa_counter );
+    }
 
-	$sth = $self->{'dbh'}->prepare("UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)");
-	if ( $sth->execute($new_soa,$$domain) <= 0 )
-	{
-		$self->_unlock;
-		return 0;
-	}
+    my $new_soa = join ' ', @soa;
 
-	$self->_unlock;
-	return 1;
+    $sth =
+      $self->{'dbh'}->prepare(
+"UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id FROM domains WHERE name = ?)"
+      );
+    if ( $sth->execute( $new_soa, $$domain ) <= 0 ) {
+        $self->_unlock;
+        return 0;
+    }
+
+    $self->_unlock;
+    return 1;
 }
 
 1;
