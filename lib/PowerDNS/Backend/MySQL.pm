@@ -413,7 +413,7 @@ sub list_records {
 
     my $sth =
       $self->{'dbh'}->prepare(
-q/SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
+q/SELECT name,content,ttl,prio FROM records WHERE type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
     $sth->execute( $rr, $domain );
 
@@ -516,7 +516,7 @@ sub delete_record {
 
     my $sth =
       $self->{'dbh'}->prepare(
-q/DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
+q/DELETE FROM records WHERE name=? AND type=? AND content=? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
     my $rv = $sth->execute( $name, $type, $content, $domain );
 
@@ -621,7 +621,7 @@ sub update_records {
 
     my $sth =
       $self->{'dbh'}->prepare(
-q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
+q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? AND type=? AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
 
 # $rv is number of rows affected; it's OK for no rows to be affected; when duplicate data is being updated for example.
@@ -702,7 +702,7 @@ q/INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,?
     {
         my $sth =
           $self->{'dbh'}->prepare(
-q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
+q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? AND type=? AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
           );
         if (
             $sth->execute(
