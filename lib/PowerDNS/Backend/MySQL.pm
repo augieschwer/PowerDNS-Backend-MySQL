@@ -621,7 +621,7 @@ sub update_records {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?)"
+q/UPDATE records SET name=? , type=? , content=? , ttl=? , prio=? WHERE name=? and type=? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
 
 # $rv is number of rows affected; it's OK for no rows to be affected; when duplicate data is being updated for example.
@@ -688,7 +688,7 @@ sub update_or_add_records {
     {
         my $sth =
           $self->{'dbh'}->prepare(
-"INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ?"
+q/INSERT INTO records (domain_id,name,type,content,ttl,prio) SELECT id,?,?,?,?,? FROM domains WHERE name = ? --/
           );
         if (
             $sth->execute( $name2, $type2, $content2, $ttl, $prio, $domain ) <=
@@ -736,7 +736,7 @@ sub find_record_by_content {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"SELECT name,type FROM records WHERE content = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+q/SELECT name,type FROM records WHERE content = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
     $sth->execute( $content, $domain );
 
@@ -760,7 +760,7 @@ sub find_record_by_name {
 
     my $sth =
       $self->{'dbh'}->prepare(
-"SELECT content,type FROM records WHERE name = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1"
+q/SELECT content,type FROM records WHERE name = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
     $sth->execute( $name, $domain );
 
@@ -803,7 +803,7 @@ sub make_domain_master {
 
     my $sth =
       $self->{'dbh'}
-      ->prepare("UPDATE domains set type='MASTER' , master='' WHERE name=?");
+      ->prepare(q/UPDATE domains SET type='MASTER' , master='' WHERE name=? --/);
     if ( $sth->execute($domain) != 1 ) { return 0; }
 
     return 1;
