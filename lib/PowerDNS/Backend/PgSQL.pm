@@ -4,6 +4,7 @@ package PowerDNS::Backend::PgSQL;
 
 use DBI;
 use Carp;
+use base 'PowerDNS::Backend::Base';
 use strict;
 use warnings;
 
@@ -125,20 +126,9 @@ this option can be used to override the default lock timeout used in those calls
 
 =cut
 
-sub new {
-    my $class  = shift;
-    my $params;
+sub _connect {
 
-    if (ref $_[0]) {
-        $params = shift;
-    }
-    else {
-        %$params = @_
-    }
-
-    my $self   = {};
-
-    bless $self, ref $class || $class;
+    my $params = shift;
 
     # FIXME allow local sockets
 
@@ -168,7 +158,7 @@ sub new {
 
     my $db_DSN = "DBI:Pg:database=$db_name;host=$db_host;port=$db_port";
 
-    $self->{'dbh'} = DBI->connect(
+    my $dbh = DBI->connect(
         $db_DSN, $db_user, $db_pass,
         {
             'PrintError' => $PgSQL_print_error,
@@ -176,11 +166,10 @@ sub new {
             'AutoCommit' => $PgSQL_auto_commit,
         }
     );
-    $self->{'dbh'}->{'PgSQL_auto_reconnect'} = $PgSQL_auto_reconnect;
+    $dbh->{'PgSQL_auto_reconnect'} = $PgSQL_auto_reconnect;
 
-    $self->{'error_msg'} = undef;
+    return $dbh;
 
-    return $self;
 }
 
 sub DESTROY {

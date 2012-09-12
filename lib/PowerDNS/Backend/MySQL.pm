@@ -4,6 +4,8 @@ package PowerDNS::Backend::MySQL;
 
 use DBI;
 use Carp;
+use base 'PowerDNS::Backend::Base';
+
 use strict;
 use warnings;
 
@@ -121,20 +123,9 @@ this option can be used to override the default lock timeout used in those calls
 
 =cut
 
-sub new {
-    my $class  = shift;
-    my $params;
+sub _connect {
 
-    if (ref $_[0]) {
-        $params = shift;
-    }
-    else {
-        %$params = @_
-    }
-
-    my $self   = {};
-
-    bless $self, ref $class || $class;
+    my $params = shift;
 
     my $db_user = defined $params->{db_user} ? $params->{db_user} : 'root';
     my $db_pass = defined $params->{db_pass} ? $params->{db_pass} : '';
@@ -162,7 +153,7 @@ sub new {
 
     my $db_DSN = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
 
-    $self->{'dbh'} = DBI->connect(
+    my $dbh = DBI->connect(
         $db_DSN, $db_user, $db_pass,
         {
             'PrintError' => $mysql_print_error,
@@ -170,11 +161,10 @@ sub new {
             'AutoCommit' => $mysql_auto_commit,
         }
     );
-    $self->{'dbh'}->{'mysql_auto_reconnect'} = $mysql_auto_reconnect;
+    $dbh->{'mysql_auto_reconnect'} = $mysql_auto_reconnect;
 
-    $self->{'error_msg'} = undef;
+    return $dbh;
 
-    return $self;
 }
 
 sub DESTROY {
