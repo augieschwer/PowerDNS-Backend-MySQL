@@ -133,13 +133,6 @@ sub _connect {
     my $db_port = defined $params->{db_port} ? $params->{db_port} : '3306';
     my $db_host = defined $params->{db_host} ? $params->{db_host} : 'localhost';
 
-    $self->{'lock_name'} =
-      defined $params->{lock_name}
-      ? $params->{lock_name}
-      : 'powerdns_backend_mysql';
-    $self->{'lock_timeout'} =
-      defined $params->{lock_timeout} ? $params->{lock_timeout} : 3;
-
     my $mysql_print_error =
       $params->{mysql_print_error} ? defined $params->{mysql_print_error} : 1;
     my $mysql_warn = $params->{mysql_warn} ? defined $params->{mysql_warn} : 1;

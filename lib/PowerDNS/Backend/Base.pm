@@ -62,6 +62,13 @@ sub new {
 
     bless $self, ref $class || $class;
 
+    $self->{'lock_timeout'} =
+      defined $params->{lock_timeout} ? $params->{lock_timeout} : 3;
+    $self->{'lock_name'} =
+      defined $params->{lock_name}
+      ? $params->{lock_name}
+      : lc(join('_', split('::', __PACKAGE__)));
+
     $self->{'dbh'} = _connect($params);
 
     $self->{'error_msg'} = undef;
