@@ -1,6 +1,6 @@
-package PowerDNS::Backend::MySQL;
+package PowerDNS::Backend::PgSQL;
 
-# ABSTRACT: Provides an interface to manipulate PowerDNS data in the MySQL Backend.
+# ABSTRACT: Provides an interface to manipulate PowerDNS data in the PgSQL Backend.
 
 use DBI;
 use Carp;
@@ -11,7 +11,7 @@ use warnings;
 
 =head1 NAME
 
-PowerDNS::Backend::MySQL - Provides an interface to manipulate PowerDNS data in the MySQL Backend.
+PowerDNS::Backend::PgSQL - Provides an interface to manipulate PowerDNS data in the PgSQL Backend.
 
 =head1 VERSION
 
@@ -23,7 +23,7 @@ our $VERSION = '0.11';
 
 =head1 SYNOPSIS
 
-    use PowerDNS::Backend::MySQL;
+    use PowerDNS::Backend::PgSQL;
 
     # Setting parameters and their default values.
     my %params = (
@@ -32,20 +32,20 @@ our $VERSION = '0.11';
             db_name            =>    'pdns',
             db_port            =>    '3306',
             db_host            =>    'localhost',
-            mysql_print_error  =>    1,
-            mysql_warn         =>    1,
-            mysql_auto_commit  =>    1,
-            mysql_auto_reconnect =>  1,
-            lock_name           =>    'powerdns_backend_mysql',
+            PgSQL_print_error  =>    1,
+            PgSQL_warn         =>    1,
+            PgSQL_auto_commit  =>    1,
+            PgSQL_auto_reconnect =>  1,
+            lock_name           =>    'powerdns_backend_PgSQL',
             lock_timeout        =>    3,
     );
 
-    my $pdns = PowerDNS::Backend::MySQL->new($params);
+    my $pdns = PowerDNS::Backend::PgSQL->new($params);
 
 =head1 DESCRIPTION
 
-    PowerDNS::Backend::MySQL provides a layer of abstraction
-    for manipulating the data stored in the PowerDNS MySQL backend.
+    PowerDNS::Backend::PgSQL provides a layer of abstraction
+    for manipulating the data stored in the PowerDNS PgSQL backend.
 
 =head1 METHODS
 
@@ -57,66 +57,70 @@ our $VERSION = '0.11';
             db_name            =>    'pdns',
             db_port            =>    '3306',
             db_host            =>    'localhost',
-            mysql_print_error  =>    1,
-            mysql_warn         =>    1,
-            mysql_auto_commit  =>    1,
-            mysql_auto_reconnect    =>    1,
-            lock_name           =>    'powerdns_backend_mysql',
+            PgSQL_print_error  =>    1,
+            PgSQL_warn         =>    1,
+            PgSQL_auto_commit  =>    1,
+            PgSQL_auto_reconnect    =>    1,
+            lock_name           =>    'powerdns_backend_PgSQL',
             lock_timeout        =>    3,
     };
 
-    my $pdns = PowerDNS::Backend::MySQL->new($params);
+    my $pdns = PowerDNS::Backend::PgSQL->new($params);
 
-    Creates a PowerDNS::Backend::MySQL object.
+    Creates a PowerDNS::Backend::PgSQL object.
 
 =over 4
 
 =item db_user
 
-The DB user to use when connecting to the MySQL Backend.
+The DB user to use when connecting to the PgSQL Backend.
 
 =item db_pass
 
-The DB password to use when connecting to the MySQL Backend.
+The DB password to use when connecting to the PgSQL Backend.
 
 =item db_name
 
-The DB name to use when connecting to the MySQL Backend.
+The DB name to use when connecting to the PgSQL Backend.
 
 =item db_port
 
-The DB port to use when connecting to the MySQL Backend.
+The DB port to use when connecting to the PgSQL Backend.
 
 =item db_host
 
-The DB host to use when connecting to the MySQL Backend.
+The DB host to use when connecting to the PgSQL Backend.
 
-=item mysql_print_error
+=item PgSQL_print_error
 
 Used to set the DBI::PrintError value.
 
-=item mysql_warn
+=item PgSQL_warn
 
 Used to set the DBI::Warn value.
 
-=item mysql_auto_commit
+=item PgSQL_auto_commit
 
 Used to set the DBI::AutoCommit value.
 
-=item mysql_auto_reconnect
+=item PgSQL_auto_reconnect
 
-Used to set the DBD::mysql::mysql_auto_reconnect value.
+Used to set the DBD::PgSQL::PgSQL_auto_reconnect value.
 
 =item lock_name
 
-Critical sections (adds, deletes, updates on records) get MySQL application level locks
-(GET_LOCK : http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
+# FIXME
+
+Critical sections (adds, deletes, updates on records) get PgSQL application level locks
+(GET_LOCK : http://dev.PgSQL.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
 this option can be used to override the default lock name used in those calls.
 
 =item lock_timeout
 
-Critical sections (adds, deletes, updates on records) get MySQL application level locks
-(GET_LOCK : http://dev.mysql.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
+# FIXME
+
+Critical sections (adds, deletes, updates on records) get PgSQL application level locks
+(GET_LOCK : http://dev.PgSQL.com/doc/refman/5.0/en/miscellaneous-functions.html#function_get-lock);
 this option can be used to override the default lock timeout used in those calls.
 
 =back
@@ -127,34 +131,36 @@ sub _connect {
 
     my $params = shift;
 
+    # FIXME allow local sockets
+
     my $db_user = defined $params->{db_user} ? $params->{db_user} : 'root';
     my $db_pass = defined $params->{db_pass} ? $params->{db_pass} : '';
     my $db_name = defined $params->{db_name} ? $params->{db_name} : 'pdns';
-    my $db_port = defined $params->{db_port} ? $params->{db_port} : '3306';
+    my $db_port = defined $params->{db_port} ? $params->{db_port} : '5824';
     my $db_host = defined $params->{db_host} ? $params->{db_host} : 'localhost';
 
-    my $mysql_print_error =
-      $params->{mysql_print_error} ? defined $params->{mysql_print_error} : 1;
-    my $mysql_warn = $params->{mysql_warn} ? defined $params->{mysql_warn} : 1;
-    my $mysql_auto_commit =
-      $params->{mysql_auto_commit} ? defined $params->{mysql_auto_commit} : 1;
+    my $PgSQL_print_error =
+      $params->{PgSQL_print_error} ? defined $params->{PgSQL_print_error} : 1;
+    my $PgSQL_warn = $params->{PgSQL_warn} ? defined $params->{PgSQL_warn} : 1;
+    my $PgSQL_auto_commit =
+      $params->{PgSQL_auto_commit} ? defined $params->{PgSQL_auto_commit} : 1;
 
-    my $mysql_auto_reconnect =
-      $params->{mysql_auto_reconnect}
-      ? defined $params->{mysql_auto_reconnect}
+    my $PgSQL_auto_reconnect =
+      $params->{PgSQL_auto_reconnect}
+      ? defined $params->{PgSQL_auto_reconnect}
       : 1;
 
-    my $db_DSN = "DBI:mysql:database=$db_name;host=$db_host;port=$db_port";
+    my $db_DSN = "DBI:Pg:database=$db_name;host=$db_host;port=$db_port";
 
     my $dbh = DBI->connect(
         $db_DSN, $db_user, $db_pass,
         {
-            'PrintError' => $mysql_print_error,
-            'Warn'       => $mysql_warn,
-            'AutoCommit' => $mysql_auto_commit,
+            'PrintError' => $PgSQL_print_error,
+            'Warn'       => $PgSQL_warn,
+            'AutoCommit' => $PgSQL_auto_commit,
         }
     );
-    $dbh->{'mysql_auto_reconnect'} = $mysql_auto_reconnect;
+    $dbh->{'PgSQL_auto_reconnect'} = $PgSQL_auto_reconnect;
 
     return $dbh;
 
@@ -909,13 +915,13 @@ q/UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id F
             db_name            =>    'pdns',
             db_port            =>    '3306',
             db_host            =>    'localhost',
-            mysql_print_error  =>    1,
-            mysql_warn         =>    1,
-            mysql_auto_commit  =>    1,
-            mysql_auto_reconnect =>  1,
+            PgSQL_print_error  =>    1,
+            PgSQL_warn         =>    1,
+            PgSQL_auto_commit  =>    1,
+            PgSQL_auto_reconnect =>  1,
     );
 
-    my $pdns = PowerDNS::Backend::MySQL->new(\%params);
+    my $pdns = PowerDNS::Backend::PgSQL->new(\%params);
 
     my $domain = 'example.com';
     my $master = '127.0.0.1';
@@ -1043,7 +1049,7 @@ q/UPDATE records SET content = ? WHERE type = 'SOA' AND domain_id = (SELECT id F
 
 =head1 NOTES
 
-Because PowerDNS::Backend::MySQL uses DBI you can get the last DBI error from the
+Because PowerDNS::Backend::PgSQL uses DBI you can get the last DBI error from the
 global variable "$DBI::errstr"; this can be handy when you want more details as to
 why a particular method failed.
 
@@ -1056,7 +1062,7 @@ http://www.schwer.us
 =head1 BUGS
 
 Please report any bugs or feature requests to
-C<bug-net-powerdns-backend-mysql at rt.cpan.org>, or through the web interface at
+C<bug-net-powerdns-backend-MySQL at rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=PowerDNS-Backend-MySQL>.
 I will be notified, and then you'll automatically be notified of progress on
 your bug as I make changes.
@@ -1065,7 +1071,7 @@ your bug as I make changes.
 
 You can find documentation for this module with the perldoc command.
 
-    perldoc PowerDNS::Backend::MySQL
+    perldoc PowerDNS::Backend::PgSQL
 
     You can also look for information at:
 
@@ -1073,19 +1079,19 @@ You can find documentation for this module with the perldoc command.
 
 =item * AnnoCPAN: Annotated CPAN documentation
 
-L<http://annocpan.org/dist/PowerDNS-Backend-MySQL>
+L<http://annocpan.org/dist/PowerDNS-Backend>
 
 =item * CPAN Ratings
 
-L<http://cpanratings.perl.org/d/PowerDNS-Backend-MySQL>
+L<http://cpanratings.perl.org/d/PowerDNS-Backend>
 
 =item * RT: CPAN's request tracker
 
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=PowerDNS-Backend-MySQL>
+L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=PowerDNS>
 
 =item * Search CPAN
 
-L<http://search.cpan.org/dist/PowerDNS-Backend-MySQL>
+L<http://search.cpan.org/dist/PowerDNS-Backend>
 
 =item * Github
 
