@@ -5,6 +5,7 @@ package PowerDNS::Backend::PgSQL;
 use DBI;
 use Carp;
 use base 'PowerDNS::Backend::Base';
+
 use strict;
 use warnings;
 
@@ -215,7 +216,7 @@ Returns 1 on success and 0 on failure.
 
 sub add_domain {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}
@@ -234,7 +235,7 @@ Returns 1 on success and 0 on failure.
 
 sub add_master {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}
@@ -255,8 +256,8 @@ Updates the existing record if there is one, otherwise inserts a new record.
 
 sub add_slave {
     my $self   = shift;
-    my $domain = shift;
-    my $master = shift;
+    my $domain = _convertscalarrefs shift;
+    my $master = _convertscalarrefs shift;
     my $sth;
 
     if ( $self->domain_exists($domain) ) {
@@ -286,7 +287,7 @@ FIXME: does this recurse? not in code but via cascading from foreign keys?
 
 sub delete_domain {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     # Remove domain.
     my $sth = $self->{'dbh'}->prepare(q/DELETE FROM domains WHERE name = ? --/);
@@ -325,7 +326,7 @@ Returns a reference to an array which contains all the domain names of that type
 
 sub list_domain_names_by_type {
     my $self = shift;
-    my $type = shift;
+    my $type = _convertscalarrefs shift;
     my @domains;
 
     # Grab the domain names.
@@ -350,7 +351,7 @@ FIXME: should consider ipv4, ipv6
 
 sub list_slave_domain_names {
     my $self   = shift;
-    my $master = shift;
+    my $master = _convertscalarrefs shift;
     my @domains;
 
     # Grab the domain names.
@@ -373,7 +374,7 @@ Returns 1 if the domain name is found, and 0 if it is not found.
 
 sub domain_exists {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth = $self->{'dbh'}->prepare(q/SELECT id FROM domains WHERE name = ? --/);
     $sth->execute($domain) or return 0;
@@ -395,13 +396,13 @@ TTL, and priority if any.
 
 sub list_records {
     my $self   = shift;
-    my $rr     = shift;
-    my $domain = shift;
+    my $rr     = _convertscalarrefs shift;
+    my $domain = _convertscalarrefs shift;
     my @records;
 
     my $sth =
       $self->{'dbh'}->prepare(
-q/SELECT name,content,ttl,prio FROM records WHERE type = ? and domain_id = (SELECT id FROM domains WHERE name = ?) --/
+q/SELECT name,content,ttl,prio FROM records WHERE type = ? AND domain_id = (SELECT id FROM domains WHERE name = ?) --/
       );
     $sth->execute( $rr, $domain );
 
@@ -422,7 +423,7 @@ content, TTL, and priority if any of the supplied domain.
 
 sub list_all_records {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my @records;
 
     my $sth =
@@ -452,7 +453,7 @@ Returns 1 if the record was successfully added, and 0 if not.
 sub add_record {
     my $self   = shift;
     my $rr     = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my ( $name, $type, $content, $ttl, $prio ) = @$rr;
 
     # Default values.
@@ -493,7 +494,7 @@ Returns 1 if the record was successfully deleted, and 0 if not.
 sub delete_record {
     my $self   = shift;
     my $rr     = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my ( $name, $type, $content ) = @$rr;
 
     # Get a server lock to avoid race condition.
@@ -504,7 +505,7 @@ sub delete_record {
 
     my $sth =
       $self->{'dbh'}->prepare(
-q/DELETE FROM records WHERE name=? and type=? and content=? and domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
+q/DELETE FROM records WHERE name=? AND type=? AND content=? AND domain_id = (SELECT id FROM domains WHERE name = ?) LIMIT 1 --/
       );
     my $rv = $sth->execute( $name, $type, $content, $domain );
 
@@ -537,7 +538,7 @@ sub update_record {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my ( $name1, $type1, $content1 ) = @$rr1;
     my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
@@ -593,7 +594,7 @@ sub update_records {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my ( $name1, $type1 ) = @$rr1;
     my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
@@ -646,7 +647,7 @@ sub update_or_add_records {
     my $self   = shift;
     my $rr1    = shift;
     my $rr2    = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my ( $name1, $type1 ) = @$rr1;
     my ( $name2, $type2, $content2, $ttl, $prio ) = @$rr2;
 
@@ -719,8 +720,8 @@ Returns a reference to an array that contains the name and type from the found r
 
 sub find_record_by_content {
     my $self    = shift;
-    my $content = shift;
-    my $domain  = shift;
+    my $content = _convertscalarrefs shift;
+    my $domain  = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}->prepare(
@@ -743,8 +744,8 @@ Returns a reference to an array that contains the content and type from the foun
 
 sub find_record_by_name {
     my $self   = shift;
-    my $name   = shift;
-    my $domain = shift;
+    my $name   = _convertscalarrefs shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}->prepare(
@@ -767,7 +768,7 @@ Returns 1 upon succes and 0 otherwise.
 
 sub make_domain_native {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}
@@ -787,7 +788,7 @@ Returns 1 upon succes and 0 otherwise.
 
 sub make_domain_master {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     my $sth =
       $self->{'dbh'}
@@ -808,7 +809,7 @@ if the domain has no master (i.e. a NATIVE domain).
 
 sub get_domain_type {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my $type   = '';
 
     my $sth =
@@ -830,7 +831,7 @@ an empty string if the domain has no master (i.e. a NATIVE domain).
 
 sub get_master {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
     my $master = '';
 
     my $sth =
@@ -852,7 +853,7 @@ Returns 1 upon succes and 0 otherwise.
 
 sub increment_serial {
     my $self   = shift;
-    my $domain = shift;
+    my $domain = _convertscalarrefs shift;
 
     # Get a server lock to avoid race condition.
     if ( !$self->_lock ) {

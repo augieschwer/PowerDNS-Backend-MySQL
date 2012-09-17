@@ -76,6 +76,10 @@ sub new {
     return $self;
 }
 
+sub _convertscalarrefs {
+    return map {ref $_ eq 'SCALAR' ? ${$_} : $_ } @_;
+}
+
 sub DESTROY {
     my $self = shift;
     if ( defined $self->{'dbh'} ) {
