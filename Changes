@@ -1,5 +1,9 @@
 Revision history for PowerDNS-Backend-MySQL
 
+0.12	Fri Sep 21 11:24:20 PDT 2012
+	Added the Github URL to the POD.
+	Adding space between new methods and POD to satisfy Test::Pod::Coverage in t/pod-coverage.t
+
 0.11	Fri Aug  3 16:15:23 PDT 2012
 	Adding two new methods: make_domain_master and add_master to address bug #76908 - patch submitted by Rich Vincelette <rvincelette@athenahealth.com> .
 
