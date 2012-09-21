@@ -1044,7 +1044,7 @@ I would like to thank Sonic.net for allowing me to release this to the public.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2007 Augie Schwer, all rights reserved.
+Copyright 2012 Augie Schwer, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
