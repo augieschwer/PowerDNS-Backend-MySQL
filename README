@@ -1,6 +1,6 @@
 PowerDNS-Backend-MySQL
 
-This module provides an interface to manipulate PowerDNS data in the 
+This module provides an interface to manipulate PowerDNS data in the
 MySQL Backend.
 
 For more information about PowerDNS you can visit http://powerdns.com .
